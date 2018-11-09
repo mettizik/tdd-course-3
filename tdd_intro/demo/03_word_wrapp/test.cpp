@@ -7,6 +7,11 @@ Example:
 When pos is specified, the search only includes sequences of characters that begin at or before position pos,
 ignoring any possible match beginning after pos
 
+split(hee, 1) -> h, e, e
+split(hee, 2) -> he, e
+split("ha ha", 2|3|4) -> "ha", "ha"
+split("h a", 1) -> "h", "a"
+
 "When pos is specified, the",
 "search only includes sequences",
 "of characters that begin at or",
@@ -16,81 +21,57 @@ ignoring any possible match beginning after pos
 */
 
 #include <gtest/gtest.h>
-#include <cctype>
+#include <string>
+#include <vector>
 
-// empty string
-// string shorter than wrap number
-// word longer than wrap number
-// word much longer than wrap number (more than 2 strings)
-// string longer than wrap number
-
-// string wrapped by several whitespaces (less than wrapLength)
-// string wrapped by several whitespaces (more than wrapLength)
-// only whitespaces in string
-
-using WrappedStrings = std::vector<std::string>;
-
-WrappedStrings WrapString(const std::string& str, size_t wrapLength)
+using StringContainer = std::vector<std::string>;
+StringContainer SplitString(const std::string& string, size_t length)
 {
-    WrappedStrings result;
-    for(size_t i = 0; i < str.length(); i += wrapLength)
+    auto firstSpaceInSubstr = string.rfind(' ', length);
+    std::string::size_type offset = length;
+    if (firstSpaceInSubstr != std::string::npos)
     {
-        std::string cur = str.substr(i, wrapLength);
-        if (cur.back() == ' ')
-        {
-            cur.pop_back();
-        }
-
-        if(!cur.empty() && cur.front() == ' ')
-        {
-            cur = cur.substr(1);
-        }
-
-        if(!cur.empty())
-        {
-            result.push_back(cur);
-        }
+        offset = firstSpaceInSubstr + 1;
     }
 
+    StringContainer result {{ string.substr(0, offset) }};
+
+    if (length < string.size())
+    {
+        result.push_back(string.substr(offset));
+    }
     return result;
 }
 
-TEST(WrapString, EmptyString)
+TEST(SplitString, OnePartForOneSymbol)
 {
-    ASSERT_EQ(WrappedStrings(), WrapString("", 25));
+    StringContainer parts = {"a"};
+    EXPECT_EQ(parts, SplitString("a", 1));
 }
 
-TEST(WrapString, StringShorterWrapNumber)
+TEST(SplitString, AbFirstForAbbaAnd2)
 {
-    ASSERT_EQ(WrappedStrings{"asdf"}, WrapString("asdf", 8));
+    EXPECT_EQ("Ab", SplitString("Abba", 2).at(0));
 }
 
-TEST(WrapString, StringLongerThanWrapNumber)
+TEST(SplitString, BaSecondForAbbba)
 {
-    WrappedStrings expected = {"asd", "f"};
-    ASSERT_EQ(expected, WrapString("asdf", 3));
+    EXPECT_EQ("ba", SplitString("Abba", 2).at(1));
 }
 
-TEST(WrapString, StringLongerThanWrapNumberSeveralParts)
+TEST(SplitString, AbForAbAnd4)
 {
-    WrappedStrings expected = {"12", "34", "56"};
-    ASSERT_EQ(expected, WrapString("123456", 2));
+    EXPECT_EQ("Ab", SplitString("Ab", 4).at(0));
 }
 
-TEST(WrapString, MultipleWordsLonger)
+TEST(SplitString, SplitAb_AbBeforeSpaceReturnsAbAndAb)
 {
-    WrappedStrings expected = {"1", "2"};
-    ASSERT_EQ(expected, WrapString("1 2", 1));
+    StringContainer parts = {"Ab", "Ab"};
+    EXPECT_EQ(parts, SplitString("Ab Ab", 2));
 }
 
-TEST(WrapString, SpaceStringEnd)
+TEST(SplitString, SplitAb_AbAtSpaceReturnsAbAndAb)
 {
-    WrappedStrings expected = {"1", "2"};
-    ASSERT_EQ(expected, WrapString("1 2", 2));
-}
-
-TEST(WrapString, StringWrappedBySeveralWhitespace)
-{
-    WrappedStrings expected = {"12", "34"};
-    ASSERT_EQ(expected, WrapString("12  34", 3));
+    StringContainer parts = {"Ab", "Ab"};
+    EXPECT_EQ(parts, SplitString("Ab Ab", 3));
 }

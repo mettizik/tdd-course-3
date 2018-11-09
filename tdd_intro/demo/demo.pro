@@ -5,6 +5,7 @@ SUBDIRS += \
     01_fizz_buzz \
     02_anagram \
     02_word_count \
+    03_word_wrapp \
     #03_allergies \
     03_roman_numerals \
     04_timer
