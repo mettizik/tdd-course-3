@@ -15,26 +15,3 @@ such: 1
 
 #include <gtest/gtest.h>
 #include <string>
-#include <map>
-
-std::map<std::string, int> CountWords(const std::string& sentence)
-{
-    return {{sentence, 1}};
-}
-
-TEST(CountWords, OneWordForSingleSymbol)
-{
-    EXPECT_EQ(1, CountWords("a").size());
-}
-
-TEST(CountWords, SameValueForSingleWord)
-{
-    std::map<std::string, int> expectedWords = {{"hello", 1}};
-    EXPECT_EQ(expectedWords, CountWords("hello"));
-}
-
-TEST(SplitWords, OneWordFromSentence)
-{
-    std::map<std::string, int> expectedWords = {{"hello", 1}};
-    EXPECT_EQ("a", Split("a b c"));
-}
