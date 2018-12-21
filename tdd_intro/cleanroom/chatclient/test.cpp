@@ -46,58 +46,10 @@ void main(argc, argv) {
 
 #include <gmock/gmock.h>
 
-using TerminateException = std::runtime_error;
-
-class IOChannel
-{
-public:
-    virtual std::string read() = 0;
-    virtual void write(const std::string& message) = 0;
-};
-
-class UIChannel : public IOChannel
-{
-public:
-    UIChannel(std::ostream& outputStream, std::istream& inputStream)
-        : outputStream_(outputStream)
-        , inputStream_(inputStream)
-    {
-
-    }
-
-    void setBuddy(const std::string& buddyName)
-    {
-        buddyName_ = buddyName;
-    }
+#include "uichannel.h"
+#include "chat.h"
 
 
-    // IOChannel interface
-public:
-    std::string read()
-    {
-        outputStream_ << "me: ";
-
-        std::string message;
-        std::getline(inputStream_, message);
-
-        if(message == "!exit!")
-        {
-            throw TerminateException("user canceled");
-        }
-
-        return message;
-    }
-
-    void write(const std::string &message)
-    {
-        outputStream_ << buddyName_ << ": " << message;
-    }
-
-private:
-    std::ostream& outputStream_;
-    std::istream& inputStream_;
-    std::string buddyName_ = "unknown";
-};
 
 class MockIOChannel: public IOChannel
 {
@@ -111,33 +63,6 @@ public:
     MOCK_METHOD1(write, void(const std::string&));
 };
 
-void ForwardMessage(IOChannel& inputChannel, IOChannel& outputChannel)
-{
-    auto msg = inputChannel.read();
-    outputChannel.write(msg);
-}
-
-void ExchangeMessage(IOChannel& inputChannel, IOChannel& outputChannel)
-{
-    while (true)
-    {
-        try
-        {
-            ForwardMessage(inputChannel, outputChannel);
-            ForwardMessage(outputChannel, inputChannel);
-        }
-        catch(const TerminateException&)
-        {
-            return;
-        }
-    }
-}
-
-std::string MakeClientHandshake(const std::string& clientName, IOChannel& outputChannel)
-{
-    outputChannel.write(clientName + ":HELLO!");
-    return "";
-}
 
 TEST(Chat, MessagesAreExchangedInTwoDirections)
 {
@@ -261,7 +186,8 @@ TEST(Chat, ClientHandshakeSendCorrectHandshakeMessage)
 {
     MockIOChannel outputChannel;
 
-    EXPECT_CALL(outputChannel, write("roma:HELLO!"));
+    EXPECT_CALL(outputChannel, write("roma" + handshakeTag));
+    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
 
     MakeClientHandshake("roma", outputChannel);
 }
@@ -270,7 +196,62 @@ TEST(Chat, ClientHandshakeReadCorrectServerNick)
 {
     MockIOChannel outputChannel;
 
-    ON_CALL(outputChannel, read()).WillByDefault(Return("max:HELLO!"));
+    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
 
     EXPECT_EQ("max", MakeClientHandshake("roma", outputChannel));
 }
+
+TEST(Chat, ClientHandshakeFailsOnIncorrectServerResponse)
+{
+    MockIOChannel outputChannel;
+
+    ON_CALL(outputChannel, read()).WillByDefault(Return("maxHELLO!"));
+
+    EXPECT_THROW(MakeClientHandshake("roma", outputChannel), std::exception);
+}
+
+TEST(Chat, ClientHandshakeSuccessfulIfBuddyNicknameHasColons)
+{
+    MockIOChannel outputChannel;
+
+    ON_CALL(outputChannel, read()).WillByDefault(Return("m:a:x" + handshakeTag));
+
+    EXPECT_EQ("m:a:x", MakeClientHandshake("roma", outputChannel));
+}
+
+TEST(Chat, ServerHandshakeReadsClientHandshake)
+{
+    MockIOChannel outputChannel;
+
+    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
+
+    EXPECT_EQ("max", MakeServerHandshake("roma", outputChannel));
+}
+
+TEST(Chat, ServerHandshakeWritesNameToClient)
+{
+    MockIOChannel outputChannel;
+
+    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
+    EXPECT_CALL(outputChannel, write("roma" + handshakeTag));
+
+    MakeServerHandshake("roma", outputChannel);
+}
+
+TEST(Chat, FabricReturnedClient)
+{
+    MockSocket socket;
+
+    ON_CALL(socket, setup_server()).WillByDeafult(Throw(std::exception()));
+
+    Fabric fabric(socket);
+    auto client = fabric.create();
+
+    EXPECT_NE(dynamic_cast<Client>(client), nullptr);
+}
+
+// auto ui_channel;
+// auto fabric = Fabric(ui_channel);
+// auto me = fabric.create(addr, port);
+// me.handshake();
+// me.exchange_mess();
