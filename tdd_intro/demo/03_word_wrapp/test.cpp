@@ -27,18 +27,20 @@ split("h a", 1) -> "h", "a"
 using StringContainer = std::vector<std::string>;
 StringContainer SplitString(const std::string& string, size_t length)
 {
-    auto firstSpaceInSubstr = string.rfind(' ', length);
-    std::string::size_type offset = length;
-    if (firstSpaceInSubstr != std::string::npos)
-    {
-        offset = firstSpaceInSubstr + 1;
-    }
-
-    StringContainer result {{ string.substr(0, offset) }};
-
-    if (length < string.size())
-    {
-        result.push_back(string.substr(offset));
+    StringContainer result {{ string.substr(0, length) }};
+    if (length < string.size()) {
+        auto firstSpaceInSubstr = string.rfind(' ', length);
+        std::string::size_type offset = length;
+        if (firstSpaceInSubstr != std::string::npos)
+        {
+            result.clear();
+            result.push_back(string.substr(0, firstSpaceInSubstr));
+            result.push_back(string.substr(firstSpaceInSubstr + 1));
+        }
+        else
+        {
+            result.push_back(string.substr(offset));
+        }
     }
     return result;
 }
