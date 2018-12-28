@@ -127,7 +127,7 @@ TEST(Chat, UIChannelWritesUsernameWithMessage)
 
     uiChannel.write("hello");
 
-    EXPECT_EQ("bob: hello", outputStream.str());
+    EXPECT_EQ("bob: hello\n", outputStream.str());
 }
 
 TEST(Chat, UIChannelWritesUnknownUsernameWithMessageWhnUsernameIsNotSet)
@@ -138,7 +138,7 @@ TEST(Chat, UIChannelWritesUnknownUsernameWithMessageWhnUsernameIsNotSet)
 
     uiChannel.write("hello");
 
-    EXPECT_EQ("unknown: hello", outputStream.str());
+    EXPECT_EQ("unknown: hello\n", outputStream.str());
 }
 
 TEST(Chat, ExchangeLoopExitsOnExitCommandFromUIChannel)
@@ -222,7 +222,7 @@ TEST(Chat, ClientHandshakeSuccessfulIfBuddyNicknameHasColons)
 
     ON_CALL(*outputChannel, read()).WillByDefault(Return("m:a:x" + handshakeTag));
 
-    Client client(outputChannel);
+    Client client(outputChannel, outputChannel);
 
     EXPECT_EQ("m:a:x", client.DoHandshake("roma"));
 }
@@ -240,12 +240,14 @@ TEST(Chat, ServerHandshakeReadsClientHandshake)
 
 TEST(Chat, ServerHandshakeWritesNameToClient)
 {
-    MockIOChannel outputChannel;
+    auto outputChannel = std::make_shared<MockIOChannel>();
 
-    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
-    EXPECT_CALL(outputChannel, write("roma" + handshakeTag));
+    ON_CALL(*outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
+    EXPECT_CALL(*outputChannel, write("roma" + handshakeTag));
 
-    MakeServerHandshake("roma", outputChannel);
+    Server server(outputChannel, nullptr);
+
+    server.DoHandshake("roma");
 }
 
 class MockSocket : public SocketChannel

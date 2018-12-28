@@ -9,5 +9,5 @@ Server::Server(std::shared_ptr<IOChannel> in, std::shared_ptr<IOChannel> out)
 
 std::string Server::DoHandshake(const std::string &nickname)
 {
-    return MakeServerHandshake(nickname, *outChannel_);
+    return MakeServerHandshake(nickname, *inChannel_);
 }

@@ -29,5 +29,5 @@ std::string UIChannel::read()
 
 void UIChannel::write(const std::string &message)
 {
-    outputStream_ << buddyName_ << ": " << message;
+    outputStream_ << buddyName_ << ": " << message << std::endl;
 }
