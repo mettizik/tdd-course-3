@@ -8,6 +8,8 @@ class IOChannel
 public:
     virtual std::string read() = 0;
     virtual void write(const std::string& message) = 0;
+
+    virtual ~IOChannel() {}
 };
 
 #endif // IOCHANNEL_H

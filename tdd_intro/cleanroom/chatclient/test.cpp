@@ -188,12 +188,14 @@ TEST(Chat, UIChannelThrowsTerminateExceptionOnExit)
 
 TEST(Chat, ClientHandshakeSendCorrectHandshakeMessage)
 {
-    MockIOChannel outputChannel;
+    auto outputChannel = std::make_shared<MockIOChannel>();
 
-    EXPECT_CALL(outputChannel, write("roma" + handshakeTag));
-    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
+    EXPECT_CALL(*outputChannel, write("roma" + handshakeTag));
+    ON_CALL(*outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
 
-    MakeClientHandshake("roma", outputChannel);
+    Client client(outputChannel, outputChannel);
+
+    client.DoHandshake("roma");
 }
 
 TEST(Chat, ClientHandshakeReadCorrectServerNick)
@@ -216,20 +218,24 @@ TEST(Chat, ClientHandshakeFailsOnIncorrectServerResponse)
 
 TEST(Chat, ClientHandshakeSuccessfulIfBuddyNicknameHasColons)
 {
-    MockIOChannel outputChannel;
+    auto outputChannel = std::make_shared<MockIOChannel>();
 
-    ON_CALL(outputChannel, read()).WillByDefault(Return("m:a:x" + handshakeTag));
+    ON_CALL(*outputChannel, read()).WillByDefault(Return("m:a:x" + handshakeTag));
 
-    EXPECT_EQ("m:a:x", MakeClientHandshake("roma", outputChannel));
+    Client client(outputChannel);
+
+    EXPECT_EQ("m:a:x", client.DoHandshake("roma"));
 }
 
 TEST(Chat, ServerHandshakeReadsClientHandshake)
 {
-    MockIOChannel outputChannel;
+    auto outputChannel = std::make_shared<MockIOChannel>();
 
-    ON_CALL(outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
+    ON_CALL(*outputChannel, read()).WillByDefault(Return("max" + handshakeTag));
 
-    EXPECT_EQ("max", MakeServerHandshake("roma", outputChannel));
+    Server server(outputChannel, outputChannel);
+
+    EXPECT_EQ("max", server.DoHandshake("roma"));
 }
 
 TEST(Chat, ServerHandshakeWritesNameToClient)
@@ -248,7 +254,7 @@ public:
     MOCK_METHOD0(read, std::string());
     MOCK_METHOD1(write, void(const std::string&));
     MOCK_METHOD1(Bind, void(uint16_t));
-    MOCK_METHOD2(Connect, void(const char*, uint16_t ));
+    MOCK_METHOD2(Connect, void(const std::string&, uint16_t ));
     MOCK_METHOD0(Accept, void());
 };
 
@@ -263,4 +269,54 @@ TEST(Chat, FabricReturnsClientWhenSocketFailsToBindPort)
     auto client = fabric.create(socket);
 
     EXPECT_NE(dynamic_cast<Client*>(client.get()), nullptr);
+}
+
+TEST(Chat, FabricReturnsServerWhenSocketSucceedsToBindPortAndAccept)
+{
+    auto socket = std::make_shared<MockSocket>();
+    auto ui = std::make_shared<MockIOChannel>();
+
+    EXPECT_CALL(*socket, Bind(4444));
+    EXPECT_CALL(*socket, Accept());
+
+    Fabric fabric(ui);
+    auto server = fabric.create(socket);
+
+    EXPECT_NE(dynamic_cast<Server*>(server.get()), nullptr);
+}
+TEST(Chat, FabricCallsConnectForClientCase)
+{
+    auto socket = std::make_shared<MockSocket>();
+    auto ui = std::make_shared<MockIOChannel>();
+
+    ON_CALL(*socket, Bind(testing::_)).WillByDefault(Throw(NetworkError("WTF")));
+    EXPECT_CALL(*socket, Connect("localhost", 4444));
+
+    Fabric fabric(ui);
+    auto client = fabric.create(socket);
+}
+
+TEST(Chat, ChatParticipantExchangesMessagesUntilExit)
+{
+    //function should return on !exit!
+    //no send to output
+
+    auto inputChannel = std::make_shared<MockIOChannel>();
+    auto outputChannel = std::make_shared<MockIOChannel>();
+
+    ChatParticipant chatParticipant(inputChannel, outputChannel);
+
+    {
+        InSequence inSequence;
+
+        EXPECT_CALL(*inputChannel, read()).WillOnce(Return("test"));
+        EXPECT_CALL(*outputChannel, write(::testing::_));
+        EXPECT_CALL(*outputChannel, read()).WillOnce(Return("test2"));
+        EXPECT_CALL(*inputChannel, write(::testing::_));
+
+        EXPECT_CALL(*inputChannel, read()).WillOnce(Throw(TerminateException("")));
+        EXPECT_CALL(*outputChannel, write(::testing::_)).Times(0);
+    }
+
+    chatParticipant.ExchangeMessages();
 }

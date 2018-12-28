@@ -28,13 +28,13 @@ void SocketChannel::Bind(uint16_t port)
     fd_ = GuardSockFd(socket_create(port));
 }
 
-void SocketChannel::Connect(const char* addr, uint16_t port)
+void SocketChannel::Connect(const std::string& addr, uint16_t port)
 {
     if (fd_ && *fd_ > 0) {
         throw NetworkError("Socket already initialized");
     }
 
-    fd_ = GuardSockFd(socket_connect(addr, port));
+    fd_ = GuardSockFd(socket_connect(addr.c_str(), port));
 }
 
 void SocketChannel::Accept()

@@ -23,15 +23,15 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #ifdef WIN32
 #include <winsock2.h>
 #include <windows.h>
 static int wsa_init = 0;
 #else
+#include <unistd.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -70,11 +70,11 @@ int socket_create(uint16_t port)
         return -1;
     }
 
-    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
+    /*if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
         perror("setsockopt()");
         socket_close(sfd);
         return -1;
-    }
+    }*/
 
     memset((void *) &saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
@@ -135,13 +135,13 @@ int socket_connect(const char *addr, uint16_t port)
         perror("socket()");
         return -1;
     }
-
+    /*
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (void*)&yes, sizeof(int)) == -1) {
         perror("setsockopt()");
         socket_close(sfd);
         return -1;
     }
-
+    */
     memset((void *) &saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
     saddr.sin_addr.s_addr = *(uint32_t *) hp->h_addr;
@@ -279,7 +279,11 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
         return res;
     }
     // if we get here, there _is_ data available
+#ifndef WIN32
     result = recv(fd, data, length, flags);
+#else
+    result = recv((SOCKET)fd, (char*)data, length, flags);
+#endif
     if (res > 0 && result == 0) {
         // but this is an error condition
         if (verbose >= 3)
@@ -294,5 +298,9 @@ int socket_receive_timeout(int fd, void *data, size_t length, int flags,
 
 int socket_send(int fd, void *data, size_t length)
 {
+#ifndef WIN32
     return send(fd, data, length, 0);
+#else
+    return send((SOCKET)fd, (const char*)data, length, 0);
+#endif
 }

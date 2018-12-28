@@ -9,7 +9,7 @@ class SocketChannel : public IOChannel
 {
 public:
     virtual void Bind(uint16_t port);
-    virtual void Connect(const char* addr, uint16_t port);
+    virtual void Connect(const std::string& addr, uint16_t port);
     virtual void Accept();
 
     std::string read();

@@ -1,5 +1,6 @@
 !unix:include(../../gmock.pri)
 unix:LIBS += -lgmock -lgtest -lpthread
+win32:LIBS += -lws2_32
 
 TEMPLATE = app
 CONFIG += console c++11

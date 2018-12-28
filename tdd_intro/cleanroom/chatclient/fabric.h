@@ -9,7 +9,8 @@ class Fabric
 public:
     Fabric(std::shared_ptr<IOChannel> ui);
     ChatParticipantGuard create(std::shared_ptr<SocketChannel> socket);
-
+private:
+    std::shared_ptr<IOChannel> ui_;
 };
 
 #endif // FABRIC_H
