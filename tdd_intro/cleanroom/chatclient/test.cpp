@@ -47,6 +47,10 @@ void main(argc, argv) {
 #include <gmock/gmock.h>
 
 #include "uichannel.h"
+#include "socketchannel.h"
+#include "fabric.h"
+#include "client.h"
+#include "server.h"
 #include "chat.h"
 
 
@@ -238,20 +242,25 @@ TEST(Chat, ServerHandshakeWritesNameToClient)
     MakeServerHandshake("roma", outputChannel);
 }
 
-TEST(Chat, FabricReturnedClient)
+class MockSocket : public SocketChannel
 {
-    MockSocket socket;
+public:
+    MOCK_METHOD0(read, std::string());
+    MOCK_METHOD1(write, void(const std::string&));
+    MOCK_METHOD1(Bind, void(uint16_t));
+    MOCK_METHOD2(Connect, void(const char*, uint16_t ));
+    MOCK_METHOD0(Accept, void());
+};
 
-    ON_CALL(socket, setup_server()).WillByDeafult(Throw(std::exception()));
+TEST(Chat, FabricReturnsClientWhenSocketFailsToBindPort)
+{
+    auto socket = std::make_shared<MockSocket>();
+    auto ui = std::make_shared<MockIOChannel>();
 
-    Fabric fabric(socket);
-    auto client = fabric.create();
+    ON_CALL(*socket, Bind(testing::_)).WillByDefault(Throw(NetworkError("WTF")));
 
-    EXPECT_NE(dynamic_cast<Client>(client), nullptr);
+    Fabric fabric(ui);
+    auto client = fabric.create(socket);
+
+    EXPECT_NE(dynamic_cast<Client*>(client.get()), nullptr);
 }
-
-// auto ui_channel;
-// auto fabric = Fabric(ui_channel);
-// auto me = fabric.create(addr, port);
-// me.handshake();
-// me.exchange_mess();

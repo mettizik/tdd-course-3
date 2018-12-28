@@ -1,6 +1,6 @@
 #ifndef CHAT_H
 #define CHAT_H
-
+#include <stdexcept>
 #include "iochannel.h"
 
 const std::string handshakeTag = ":HELLO!";

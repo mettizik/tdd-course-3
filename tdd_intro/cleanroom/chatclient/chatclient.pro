@@ -1,4 +1,5 @@
-include(../../gmock.pri)
+!unix:include(../../gmock.pri)
+unix:LIBS += -lgmock -lgtest -lpthread
 
 TEMPLATE = app
 CONFIG += console c++11
@@ -8,10 +9,23 @@ CONFIG -= qt
 SOURCES += \
     test.cpp \
     chat.cpp \
-    uichannel.cpp
+    uichannel.cpp \
+    __socket.cpp \
+    socket_tests.cpp \
+    socketchannel.cpp \
+    fabric.cpp \
+    server.cpp \
+    client.cpp \
+    main.cpp
 
 HEADERS += \
     iochannel.h \
     uichannel.h \
-    chat.h
+    chat.h \
+    __socket.h \
+    socketchannel.h \
+    fabric.h \
+    chatparticipant.h \
+    server.h \
+    client.h
 
